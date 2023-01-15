@@ -33,13 +33,12 @@ public class NeuralNetwork : MonoBehaviour
     {
         if (once)
         {
+            //Calculate Input Layer
             for (int i = 0; i < NumNeurons; i++)
             {
-
                 for (int j = 0; j < NumInputLayers; j++)
                 {
                     neurons[0][i] += inputLayer[j] * weights[0][j, i] + biases[0][j, i];
-
                 }
                 neurons[0][i] = (float)System.Math.Tanh(neurons[0][i]);
             }
