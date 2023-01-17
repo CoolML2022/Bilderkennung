@@ -1,22 +1,24 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 public class NeuralNetwork : MonoBehaviour
 {
 
     [SerializeField] private int NumInputLayers;
     [SerializeField] private int NumOutputLayers;
+    [SerializeField] private bool ShowWeights = false;
 
     [SerializeField] private int NumHiddenLayers;
     [SerializeField] private int NumNeurons;
 
-
+    private List<float[,]> weights = new List<float[,]>();
     private List<float[,]> biases = new List<float[,]>();
     private List<float[]> neurons = new List<float[]>();
     private List<float> outputLayer = new List<float>();
     private List<float> inputLayer = new List<float>();
-    private List<float[,]> weights = new List<float[,]>();
+
 
     
     private void Awake()
@@ -26,6 +28,7 @@ public class NeuralNetwork : MonoBehaviour
 
         RandomizeWeights();
         print(NumNeurons);
+        RandomizeBiases();
     }
 
 
@@ -33,14 +36,15 @@ public class NeuralNetwork : MonoBehaviour
     {
         if (once)
         {
-            //Calculate Input Layer
+            //Calculate Input Layer to first Neuron
             for (int i = 0; i < NumNeurons; i++)
             {
                 for (int j = 0; j < NumInputLayers; j++)
                 {
                     neurons[0][i] += inputLayer[j] * weights[0][j, i] + biases[0][j, i];
+                    print(inputLayer[j]);
                 }
-                neurons[0][i] = (float)System.Math.Tanh(neurons[0][i]);
+                neurons[0][i] = SoftPlus(neurons[0][i]);
             }
             //Calculate hiddenLayers
             for (int i = 1; i < NumHiddenLayers; i++)
@@ -70,19 +74,21 @@ public class NeuralNetwork : MonoBehaviour
     private void Initalise()
     {
         float[] counter;
-        float[,] WBCounter = new float[NumInputLayers, NumNeurons];
-        weights.Add(WBCounter);
-        biases.Add(WBCounter);
+        float[,] WCounter = new float[NumInputLayers, NumNeurons];
+        float[,] BCounter = new float[NumInputLayers, NumNeurons];
+        weights.Add(WCounter);
+        biases.Add(BCounter);
 
-        WBCounter = new float[NumNeurons, NumNeurons];
+        WCounter = new float[NumNeurons, NumNeurons];
+        BCounter = new float[NumNeurons, NumNeurons];
         for (int i = 0; i < NumHiddenLayers - 1; i++)
         {
-            weights.Add(WBCounter);
-            biases.Add(WBCounter);
+            weights.Add(WCounter);
+            biases.Add(BCounter);
         }
-        WBCounter = new float[NumNeurons, NumOutputLayers];
-        weights.Add(WBCounter);
-        biases.Add(WBCounter);
+        WCounter = new float[NumNeurons, NumOutputLayers];
+        weights.Add(WCounter);
+        biases.Add(BCounter);
 
 
         print("Weights count: " + weights.Count);
@@ -109,24 +115,26 @@ public class NeuralNetwork : MonoBehaviour
             {
                 for (int f = 0; f < weights[i].GetLength(1); f++)
                 {
-                    weights[i][j, f] = Random.Range(-2f, 2f);
+                    weights[i][j, f] = Random.Range(-1f, 1f);
+                    //print("Weights:" + weights[i][j, f]);
                 }
             }
         }
+    }
+    void RandomizeBiases()
+    {
         for (int i = 0; i < biases.Count; i++)
         {
             for (int j = 0; j < biases[i].GetLength(0); j++)
             {
                 for (int f = 0; f < biases[i].GetLength(1); f++)
                 {
-                    biases[i][j, f] = Random.Range(-2f, 2f);
+                    biases[i][j, f] = Random.Range(-1f, 1f);
+                    //print("Biases:" + biases[i][j, f]);
                 }
             }
         }
-        print("Weights: " + weights[0][0, 0]);
-        print("Biases: " + biases[0][0, 0]);
     }
-
     private void OnGUI()
     {
         Visualize();
@@ -170,14 +178,36 @@ public class NeuralNetwork : MonoBehaviour
         {
             for (int i = 0; i < NumNeurons; i++)
             {
-                GUI.Box(new Rect(400 + j * 80, Screen.height / 2 - ((NumNeurons - 1) * 80 / 2) + 80 * i, 100, 40), neurons[j][i].ToString());
+                GUI.Box(new Rect(500 + j * 260, Screen.height / 2 - ((NumNeurons - 1) * 80 / 2) + 80 * i, 100, 40), neurons[j][i].ToString());
             }
         }
         for (int i = 0; i < NumOutputLayers; i++)
         {
-            GUI.Box(new Rect(400 + NumHiddenLayers * 80 + 100, Screen.height / 2 - ((NumOutputLayers - 1) * 80 / 2) + 80 * i, 100, 40), outputLayer[i].ToString());
+            GUI.Box(new Rect(400 + NumHiddenLayers * 260 + 100, Screen.height / 2 - ((NumOutputLayers - 1) * 80 / 2) + 80 * i, 100, 40), outputLayer[i].ToString());
         }
 
+
+        //show weights an biases
+
+        //value = EditorGUI.Slider(new Rect(100, 500, 150, 20), value, -1f, 1f);
+        if (ShowWeights)
+        {
+            for (int i = 0; i < weights.Count; i++)
+            {
+                for (int j = 0; j < weights[i].GetLength(0); j++)
+                {
+                    for (int f = 0; f < weights[i].GetLength(1); f++)
+                    {
+                        if (weights.Count != NumHiddenLayers - 1)
+                            weights[i][j, f] = EditorGUI.Slider(new Rect(345 + i * 260, Screen.height / 2 - ((20 * weights[i].GetLength(0) * weights[i].GetLength(1)) / 2) + (20 * j * NumNeurons) + 20 * f, 150, 20), weights[i][j, f], -1f, 1f);
+                        else
+                            weights[i][j, f] = EditorGUI.Slider(new Rect(345 + i * 260, Screen.height / 2 - ((20 * weights[i].GetLength(0) * weights[i].GetLength(1)) / 2) + (20 * j * NumOutputLayers) + 20 * f, 150, 20), weights[i][j, f], -1f, 1f);
+                    }
+                }
+            }
+        }
+
+        
     }
     void ClearNetwork()
     {
@@ -207,3 +237,4 @@ public class NeuralNetwork : MonoBehaviour
         return (output);
     }
 }
+
